@@ -5,6 +5,9 @@
 #ifndef CONTRASTENHANCER_IMAGE_H
 #define CONTRASTENHANCER_IMAGE_H
 
+#define MAX_NUM_CHANNELS 3
+
+#include <array>
 #include <vector>
 #include <cstdint>
 
@@ -22,17 +25,8 @@ namespace LN {
 
     private:
 
-        struct RGB {
-            uint8_t r;
-            uint8_t g;
-            uint8_t b;
-
-            explicit RGB(uint8_t r = 0, uint8_t g = 0, uint8_t b = 0) :
-                    r(r), g(g), b(b) {
-            }
-        };
-
-        using matrix = std::vector<std::vector<RGB>>;
+        using pixel = std::array<uint8_t, MAX_NUM_CHANNELS>;
+        using matrix = std::vector<std::vector<pixel>>;
 
         int nChannels;
         int width, height;

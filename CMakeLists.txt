@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 add_executable(hw5 main.cpp Image.h Image.cpp)
 
 find_package(OpenMP REQUIRED)
-target_link_libraries(hw5 PRIVATE OpenMP::OpenMP_CXX)
+#target_link_libraries(hw5 PRIVATE OpenMP::OpenMP_CXX)
 
 #message(STATUS ${CMAKE_MODULE_PATH})
 #get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)

@@ -24,17 +24,13 @@ Image::Image(std::vector<uint8_t> source, int numberOfChannels, int width, int h
     this->maxColorIntensity = maxColorIntensity;
 
     size_t id = 0;
-    image = matrix(width, std::vector<RGB>(height));
+
+    image = matrix(width, std::vector<pixel>(height));
     for (int i = 0; i < width; ++i) {
         for (int j = 0; j < height; ++j) {
-            RGB *pixel = new RGB(source[id++]);
-            if (nChannels > 1) {
-                pixel->g = source[id++];
-                if (nChannels > 2) {
-                    pixel->b = source[id++];
-                }
+            for (int k = 0; k < numberOfChannels; ++k) {
+                image[i][j][k] = source[id++];
             }
-            image[i][j] = *pixel;
         }
     }
 
@@ -44,36 +40,14 @@ Image::Image(std::vector<uint8_t> source, int numberOfChannels, int width, int h
 // Applies min-max contrast stretching (percentile contrast stretching if ignorance is not zero)
 void Image::EnhanceGlobalContrast(int ignorance) {
     expectBetween(ignorance, 0, 50, "ignorance percentage");
-    uint8_t min = GetMinMaxIntensityLevel(ignorance, 0, 1);
-    uint8_t max = GetMinMaxIntensityLevel(ignorance, 0, -1);
-    for (auto &row: image) {
-        for (auto &pixel: row) {
-            pixel.r = std::max(pixel.r, min);
-            pixel.r = std::min(pixel.r, max);
-            pixel.r = min == max ? 0 : ((pixel.r - min) * maxColorIntensity) / (max - min);
-        }
-    }
-
-    if (nChannels > 1) {
-        min = GetMinMaxIntensityLevel(ignorance, 1, 1);
-        max = GetMinMaxIntensityLevel(ignorance, 1, -1);
+    for (int i = 0; i < nChannels; ++i) {
+        uint8_t min = GetMinMaxIntensityLevel(ignorance, i, 1);
+        uint8_t max = GetMinMaxIntensityLevel(ignorance, i, -1);
         for (auto &row: image) {
             for (auto &pixel: row) {
-                pixel.g = std::max(pixel.g, min);
-                pixel.g = std::min(pixel.g, max);
-                pixel.g = min == max ? 0 : ((pixel.g - min) * maxColorIntensity) / (max - min);
-            }
-        }
-
-        if (nChannels > 2) {
-            min = GetMinMaxIntensityLevel(ignorance, 2, 1);
-            max = GetMinMaxIntensityLevel(ignorance, 2, -1);
-            for (auto &row: image) {
-                for (auto &pixel: row) {
-                    pixel.b = std::max(pixel.b, min);
-                    pixel.b = std::min(pixel.b, max);
-                    pixel.b = min == max ? 0 : ((pixel.b - min) * maxColorIntensity) / (max - min);
-                }
+                pixel[i] = std::max(pixel[i], min);
+                pixel[i] = std::min(pixel[i], max);
+                pixel[i] = min == max ? 0 : ((pixel[i] - min) * maxColorIntensity) / (max - min);
             }
         }
     }
@@ -86,12 +60,8 @@ void Image::UpdateFrequency() {
     frequency.resize(nChannels, std::vector<int>(maxColorIntensity + 1, 0));
     for (auto &row: image) {
         for (auto &pixel: row) {
-            frequency[0][pixel.r]++;
-            if (nChannels > 1) {
-                frequency[1][pixel.g]++;
-                if (nChannels > 2) {
-                    frequency[2][pixel.b]++;
-                }
+            for (int i = 0; i < nChannels; ++i) {
+                frequency[i][pixel[i]]++;
             }
         }
     }
@@ -99,20 +69,10 @@ void Image::UpdateFrequency() {
 
 void Image::PrintPixelIntensityFrequency() {
     std::cout << "Image color frequency: " << std::endl;
-    std::cout << "Channel 1 | " << (nChannels > 1 ? "R:" : "grayscale:") << std::endl;
-    for (int i = 0; i <= maxColorIntensity; ++i) {
-        std::cout << i << ": " << frequency[0][i] << std::endl;
-    }
-    if (nChannels > 1) {
-        std::cout << "Channel 2 | G:" << std::endl;
-        for (int i = 0; i <= maxColorIntensity; ++i) {
-            std::cout << i << ": " << frequency[1][i] << std::endl;
-        }
-        if (nChannels > 2) {
-            std::cout << "Channel 3 | B:" << std::endl;
-            for (int i = 0; i <= maxColorIntensity; ++i) {
-                std::cout << i << ": " << frequency[2][i] << std::endl;
-            }
+    for (int i = 0; i < nChannels; ++i) {
+        std::cout << "Channel " << i + 1 << std::endl;
+        for (int j = 0; j <= maxColorIntensity; ++j) {
+            std::cout << j << ": " << frequency[i][j] << std::endl;
         }
     }
     std::cout << std::endl;
@@ -122,12 +82,8 @@ std::vector<uint8_t> Image::GetImage() const {
     std::vector<uint8_t> result;
     for (int i = 0; i < width; ++i) {
         for (int j = 0; j < height; ++j) {
-            result.push_back(image[i][j].r);
-            if (nChannels > 1) {
-                result.push_back(image[i][j].g);
-                if (nChannels > 2) {
-                    result.push_back(image[i][j].b);
-                }
+            for (int k = 0; k < nChannels; ++k) {
+                result.push_back(image[i][j][k]);
             }
         }
     }
