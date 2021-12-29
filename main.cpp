@@ -1,60 +1,79 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <cassert>
+#include <cerrno>
 #include "Image.h"
+
+std::invalid_argument GetErr(const std::string &message);
 
 int main(int argc, char *argv[]) {
     if (argc != 5) {
-        std::cout << "expected 4 arguments, found: " << argc << std::endl;
-        for (int i = 0; i < argc; ++i) {
-            std::cout << i << ": " << argv[i] << std::endl;
-        }
-        return 0;
         //todo readme
+        throw GetErr("Expected 4 arguments, found: " + std::to_string(argc - 1));
     }
     std::string inFileName = argv[2];
-//    std::cout << inFileName.length() << " " << inFileName << std::endl;
-    std::ifstream input(inFileName, std::ios::in | std::ios::binary);
+    std::ifstream inStr(inFileName, std::ios::in | std::ios::binary);
+    if (!inStr) {
+        throw GetErr("Could not read from the input file: " + inFileName + ". File does not exist or corrupted");
+    }
     int width, height, maxColorValue;
     std::string fileType;
-//    bool fileIsOpen = input.is_open();
-//    std::cout << fileIsOpen << std::endl;
-    input >> fileType >> width >> height >> maxColorValue;
-    //todo навалить тут исключений
+    inStr >> fileType >> width >> height >> maxColorValue;
     int numberOfChannels;
     if (fileType == "P5") {
         numberOfChannels = 1;
     } else if (fileType == "P6") {
         numberOfChannels = 3;
+    } else {
+        throw GetErr("Not an PGM or PPM file");
     }
-    int uselessWhitespaces;
-    input >> uselessWhitespaces;
-    std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(input), {});
-//    std::cout << buffer.size() << std::endl;
-    
-    while (input) {
-        std::cout << "left characters" << std::endl;
-        input.ignore(1);
+    inStr.ignore(2, '\n');
+    std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(inStr), {});
+
+    assert(buffer.size() == width * height * numberOfChannels);
+    assert(inStr); // some bytes left
+
+    std::vector<uint8_t> result;
+    try {
+        auto *img = new LN::Image(buffer, numberOfChannels, width, height, maxColorValue);
+
+//#ifndef DNDEBUG
+//        img->PrintPixelIntensityFrequency();
+//#endif
+
+        errno = 0;
+        const char *pIgn = argv[4];
+        char *pEnd = nullptr;
+        int ignorance = std::strtol(pIgn, &pEnd, 10);
+        if (!(pIgn != pEnd && errno == 0 && !*pEnd) || ignorance < 0 || ignorance > 50) {
+            throw GetErr("bad ignorance percentage value: " + std::string(argv[4]));
+        }
+
+        img->EnhanceGlobalContrast(ignorance);
+
+//#ifndef DNDEBUG
+//        img->PrintPixelIntensityFrequency();
+//#endif
+
+        result = img->GetImage();
+
+        //todo прикрутить время
+        //todo многопоточность
+
+    } catch (std::invalid_argument &e) {
+        throw GetErr("Invalid image: " + std::string(e.what()));
     }
 
-
-//    std::cout << "Hello, World!" << std::endl;
-
-    auto *img = new LN::Image(buffer, numberOfChannels, width, height, maxColorValue);
-    
-    img->PrintPixelIntensityFrequency();
-    img->EnhanceGlobalContrast(atoi(argv[4]));
-    img->PrintPixelIntensityFrequency();
-
-    std::vector<uint8_t> result = img->GetImage();
-    
     std::string outFileName = argv[3];
-    std::ofstream out(outFileName, std::ios::out | std::ios::binary);
-    out << fileType << '\n' << width << ' ' << height << '\n' << maxColorValue << '\n';
-    out.write(reinterpret_cast<char*>(result.data()), result.size());
-
-    //todo прикрутить время
-    //todo многопоточность
+    std::ofstream outStr(outFileName, std::ios::out | std::ios::binary);
+    if (!outStr) {
+        throw GetErr("Could not write to the output file: " + inFileName);
+    }
+    outStr << fileType << '\n' << width << ' ' << height << '\n' << maxColorValue << '\n';
+    outStr.write(reinterpret_cast<char *>(result.data()), result.size());
 
     return 0;
 }
+
+std::invalid_argument GetErr(const std::string &message) { return std::invalid_argument(message); }

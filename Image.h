@@ -14,7 +14,7 @@ namespace LN {
     public:
         explicit Image(std::vector<uint8_t> source, int numberOfChannels, int width, int height, int maxColorIntensity);
 
-        std::vector<uint8_t> GetImage() const;
+        [[nodiscard]] std::vector<uint8_t> GetImage() const;
 
         void EnhanceGlobalContrast(int ignorance);
 
@@ -46,9 +46,9 @@ namespace LN {
 
         static void expectBetween(int number, int from, int to, const std::string &varName);
 
-        void expectPositive(int number, const std::string &varName);
+        static void expectPositive(int number, const std::string &varName);
 
-        void expectNonNegative(int number, const std::string &varName);
+        static void expectNonNegative(int number, const std::string &varName);
     };
 }
 

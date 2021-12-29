@@ -144,13 +144,12 @@ void Image::expectNonNegative(int number, const std::string &varName) {
 
 void Image::expectBetween(int number, int from, int to, const std::string &varName) {
     if (number < from || number > to) {
-        throw std::invalid_argument("Error: " + varName + " must be in interval [" + std::to_string(from) +
+        throw std::invalid_argument(varName + " must be in interval [" + std::to_string(from) +
                                     ";" + std::to_string(to) + "]");
     }
 }
 
 uint8_t Image::GetMinMaxIntensityLevel(int ignorance, int channel, int step) {
-    //todo ассерты только в дебаге?
     assert(0 <= ignorance && ignorance <= 50);
     assert(0 <= channel && channel < nChannels);
     assert(step == -1 || step == 1);
@@ -165,4 +164,6 @@ uint8_t Image::GetMinMaxIntensityLevel(int ignorance, int channel, int step) {
             skipped += frequency[channel][i];
         }
     }
+    assert(false);
+    return last;
 }
