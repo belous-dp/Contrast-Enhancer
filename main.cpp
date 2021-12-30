@@ -4,68 +4,35 @@
 #include <cassert>
 #include <cerrno>
 #include "Image.h"
-
-//  Windows
-#ifdef _WIN32
-
-#include <Windows.h>
-
-double get_wall_time() {
-    LARGE_INTEGER time, freq;
-    if (!QueryPerformanceFrequency(&freq)) {
-        //  Handle error
-        return 0;
-    }
-    if (!QueryPerformanceCounter(&time)) {
-        //  Handle error
-        return 0;
-    }
-    return (double) time.QuadPart / freq.QuadPart;
-}
-
-double get_cpu_time() {
-    FILETIME a, b, c, d;
-    if (GetProcessTimes(GetCurrentProcess(), &a, &b, &c, &d) != 0) {
-        //  Returns total user time.
-        //  Can be tweaked to include kernel times as well.
-        return
-                (double) (d.dwLowDateTime |
-                          ((unsigned long long) d.dwHighDateTime << 32)) * 0.0000001;
-    } else {
-        //  Handle error
-        return 0;
-    }
-}
-
-//  Posix/Linux
-#else
-#include <time.h>
-#include <sys/time.h>
-double get_wall_time(){
-    struct timeval time;
-    if (gettimeofday(&time,NULL)){
-        //  Handle error
-        return 0;
-    }
-    return (double)time.tv_sec + (double)time.tv_usec * .000001;
-}
-double get_cpu_time(){
-    return (double)clock() / CLOCKS_PER_SEC;
-}
-#endif
+#include "Time.h"
 
 std::invalid_argument GetErr(const std::string &message);
 
 int GetInt(const char *sNumber);
 
 int main(int argc, char *argv[]) {
-    const double wall0 = get_wall_time();
-    const double cpu0 = get_cpu_time();
+
+    Time *timestamps = new Time(3);
+#ifndef NDEBUG
+    timestamps->SaveCurrent("Overall");
+    timestamps->SaveCurrent("Reading input");
+#endif
 
     if (argc != 5) {
         //todo readme
         throw GetErr("Expected 4 arguments, found: " + std::to_string(argc - 1));
     }
+
+    int numThreads = 0;
+    try {
+        numThreads = GetInt(argv[1]);
+    } catch (std::invalid_argument &e) {
+        // Do nothing.
+    }
+#ifdef _OPENMP
+    Image::setOmpParameters(numThreads);
+#endif
+
     const std::string inFileName = argv[2];
     std::ifstream inStr(inFileName, std::ios::in | std::ios::binary);
     if (!inStr) {
@@ -94,27 +61,42 @@ int main(int argc, char *argv[]) {
     int maxColorValue;
     inStr >> maxColorValue;
     inStr.ignore(1, '\n');
-    const std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(inStr), {});
+    std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(inStr), {});
 
     assert(buffer.size() == width * height * numberOfChannels);
     assert(inStr); // some bytes left
 
-    std::vector<uint8_t> result;
-    try {
-        auto *img = new LN::Image(buffer, numberOfChannels, width, height, maxColorValue);
-
-#ifndef DNDEBUG
-        img->PrintPixelIntensityFrequency();
+#ifndef NDEBUG
+    timestamps->PrintDelta("Reading input");
+    timestamps->SaveCurrent("Generating image");
 #endif
 
+    std::vector<uint8_t> result;
+    try {
+        auto *img = new Image(buffer, numberOfChannels, width, height, maxColorValue);
+
+#ifndef NDEBUG
+//        img->PrintPixelIntensityFrequency();
+        timestamps->PrintDelta("Generating image");
+#endif
+        timestamps->SaveCurrent("Enhancing contrast");
         const int ignorance = GetInt(argv[4]);
         img->EnhanceGlobalContrast(ignorance);
+        std::cout << "Time (" << numThreads << " thread(s)): "
+                  << timestamps->GetDelta("Enhancing contrast").wall * 1000. << " ms\n";
 
-#ifndef DNDEBUG
-        img->PrintPixelIntensityFrequency();
+#ifndef NDEBUG
+        timestamps->PrintDelta("Enhancing contrast");
+//        img->PrintPixelIntensityFrequency();
+        timestamps->SaveCurrent("Getting image");
 #endif
 
         result = img->GetImage();
+
+#ifndef NDEBUG
+        timestamps->PrintDelta("Getting image");
+        timestamps->SaveCurrent("Printing output");
+#endif
 
         //todo прикрутить время
         //todo многопоточность
@@ -131,11 +113,10 @@ int main(int argc, char *argv[]) {
     outStr << fileType << '\n' << width << ' ' << height << '\n' << maxColorValue << '\n';
     outStr.write(reinterpret_cast<char *>(result.data()), result.size());
 
-    const double wall1 = get_wall_time();
-    const double cpu1 = get_cpu_time();
-
-    std::cout << "Wall time passed: " << wall1 - wall0 << "s" << std::endl;
-    std::cout << "CPU time passed: " << cpu1 - cpu0 << "s" << std::endl;
+#ifndef NDEBUG
+    timestamps->PrintDelta("Printing output");
+    timestamps->PrintDelta("Overall");
+#endif
 
     return 0;
 }

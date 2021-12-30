@@ -5,45 +5,42 @@
 #ifndef CONTRASTENHANCER_IMAGE_H
 #define CONTRASTENHANCER_IMAGE_H
 
-#define MAX_NUM_CHANNELS 3
-
 #include <array>
 #include <vector>
 #include <cstdint>
 
-namespace LN {
+class Image {
+public:
+    explicit Image(std::vector<uint8_t> &source, int numberOfChannels, int width, int height, int maxColorIntensity);
 
-    class Image {
-    public:
-        explicit Image(std::vector<uint8_t> source, int numberOfChannels, int width, int height, int maxColorIntensity);
+    [[nodiscard]] std::vector<uint8_t> GetImage() const;
 
-        [[nodiscard]] std::vector<uint8_t> GetImage() const;
+    void EnhanceGlobalContrast(int ignorance);
 
-        void EnhanceGlobalContrast(int ignorance);
+    void PrintPixelIntensityFrequency();
 
-        void PrintPixelIntensityFrequency();
+    static void setOmpParameters(int numThreads);
 
-    private:
+private:
 
-        using pixel = std::array<uint8_t, MAX_NUM_CHANNELS>;
-        using matrix = std::vector<std::vector<pixel>>;
+    static constexpr int MIN_NUM_CHANNELS = 1;
+    static constexpr int MAX_NUM_CHANNELS = 3;
+    size_t size;
+    int nChannels;
+    int width, height;
+    int maxColorIntensity;
+    std::vector<uint8_t> image;
+    std::vector<int> frequency;
 
-        int nChannels;
-        int width, height;
-        int maxColorIntensity;
-        matrix image;
-        std::vector<std::vector<int>> frequency;
+    uint8_t GetMinMaxIntensityLevel(int ignorance, int channel, int step);
 
-        uint8_t GetMinMaxIntensityLevel(int ignorance, int channel, int step);
+    void UpdateFrequency();
 
-        void UpdateFrequency();
+    static void expectBetween(int number, int from, int to, const std::string &varName);
 
-        static void expectBetween(int number, int from, int to, const std::string &varName);
+    static void expectPositive(int number, const std::string &varName);
 
-        static void expectPositive(int number, const std::string &varName);
-
-        static void expectNonNegative(int number, const std::string &varName);
-    };
-}
+    static void expectNonNegative(int number, const std::string &varName);
+};
 
 #endif //CONTRASTENHANCER_IMAGE_H

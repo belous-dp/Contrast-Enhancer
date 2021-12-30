@@ -3,10 +3,13 @@ project(ContrastEnhancer)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(hw5 main.cpp Image.h Image.cpp)
+add_executable(hw5 main.cpp Image.h Image.cpp Time.cpp Time.h)
 
 find_package(OpenMP REQUIRED)
-#target_link_libraries(hw5 PRIVATE OpenMP::OpenMP_CXX)
+target_link_libraries(hw5 PRIVATE OpenMP::OpenMP_CXX)
+
+set(CMAKE_CXX_FLAGS -O0)
+
 
 #message(STATUS ${CMAKE_MODULE_PATH})
 #get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
@@ -47,6 +50,6 @@ find_package(OpenMP REQUIRED)
 ## link python and numpy
 #target_link_libraries(hw5 PRIVATE ${PYTHON_LIBRARIES} Python3::NumPy)
 
-set(CMAKE_CXX_FLAGS -Wal)
-set(CMAKE_CXX_FLAGS -Wextra)
-set(CMAKE_CXX_FLAGS -pedantic)
+#set(CMAKE_CXX_FLAGS -Wall)
+#set(CMAKE_CXX_FLAGS -Wextra)
+#set(CMAKE_CXX_FLAGS -pedantic)
