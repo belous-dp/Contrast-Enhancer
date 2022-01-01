@@ -27,7 +27,6 @@ Image::Image(std::vector<uint8_t> &source, int numberOfChannels, int width, int 
     if (source.size() != size) {
         throw std::invalid_argument("Image expected size does not match real size");
     }
-//    image = std::move(source);
     image = source;
 
     frequency.resize(nChannels * (maxColorIntensity + 1));
@@ -38,50 +37,24 @@ Image::Image(std::vector<uint8_t> &source, int numberOfChannels, int width, int 
 void Image::EnhanceGlobalContrast(int ignorance) {
     expectBetween(ignorance, 0, 50, "ignorance percentage");
 
-    Time *timestamps = new Time();
-    timestamps->SaveCurrent("Getting min-max params");
+//    Time *timestamps = new Time();
+//    timestamps->SaveCurrent("Getting min-max params");
 
     std::vector<std::pair<uint8_t, uint8_t>> minmax(MAX_NUM_CHANNELS);
 #pragma omp parallel for shared(minmax, ignorance) default(none)
     for (int i = 0; i < nChannels; ++i) {
         minmax[i] = GetMinMaxIntensityLevel(ignorance, i);
-    }
 
-    timestamps->PrintDelta("Getting min-max params");
-    timestamps->SaveCurrent("Enhancing");
+    }
+//    for (int i = 0; i < nChannels; ++i) {
+//        std::cout << "Minmax " << i << ": " << (int) minmax[i].first << ' ' << (int) minmax[i].second << std::endl;
+//    }
+//
+//    timestamps->PrintDelta("Getting min-max params");
+//    timestamps->SaveCurrent("Enhancing");
 
     std::vector<int> cntThreadsWork;
     uint32_t numProcessed = 0;
-//#pragma omp parallel shared(image, ignorance, cntThreadsWork, minmax, numProcessed) default(none)
-//    {
-//#if defined(_OPENMP) && !defined(NDEBUG)
-//#pragma omp single
-//        {
-//            cntThreadsWork.resize(omp_get_num_threads());
-//        }
-//#endif
-//#pragma omp for schedule(static)
-//        for (int j = 0; j < size; j += nChannels) {
-//            for (int i = 0; i < nChannels; ++i) {
-//#ifndef NDEBUG
-//#ifdef _OPENMP
-////#pragma omp single
-////                {
-////                    std::cout << "cur pixel: " << j + i << " , cur thread: " << omp_get_thread_num() << std::endl;
-////                }
-//                cntThreadsWork[omp_get_thread_num()]++;
-//                //#pragma omp atomic
-//#else
-//                numProcessed++;
-//#endif
-//#endif
-//                image[j + i] = std::max(image[j + i], minmax[i].first);
-//                image[j + i] = std::min(image[j + i], minmax[i].second);
-//                image[j + i] = minmax[i].first == minmax[i].second ? 0 :
-//                        ((image[j + i] - minmax[i].first) * maxColorIntensity) / (minmax[i].second - minmax[i].first);
-//            }
-//        }
-//    }
 
 #pragma omp parallel shared(image, ignorance, cntThreadsWork, minmax, numProcessed) default(none)
     {
@@ -99,39 +72,36 @@ void Image::EnhanceGlobalContrast(int ignorance) {
             //                {
             //                    std::cout << "cur pixel: " << j + i << " , cur thread: " << omp_get_thread_num() << std::endl;
             //                }
-                        cntThreadsWork[omp_get_thread_num()]++;
+                        cntThreadsWork[omp_get_thread_num()] += 3;
                         //#pragma omp atomic
 #else
                         numProcessed++;
 #endif
 #endif
-            int i = 0;
-            image[j + i] = std::max(image[j + i], minmax[i].first);
-            image[j + i] = std::min(image[j + i], minmax[i].second);
-            image[j + i] = minmax[i].first == minmax[i].second ? 0 :
-                           ((image[j + i] - minmax[i].first) * maxColorIntensity) /
-                           (minmax[i].second - minmax[i].first);
+            image[j] = std::max(image[j], minmax[0].first);
+            image[j] = std::min(image[j], minmax[0].second);
+            image[j] = minmax[0].first == minmax[0].second ? 0 :
+                       ((image[j] - minmax[0].first) * maxColorIntensity) /
+                       (minmax[0].second - minmax[0].first);
 
-            i = 1;
-            image[j + i] = std::max(image[j + i], minmax[i].first);
-            image[j + i] = std::min(image[j + i], minmax[i].second);
-            image[j + i] = minmax[i].first == minmax[i].second ? 0 :
-                           ((image[j + i] - minmax[i].first) * maxColorIntensity) /
-                           (minmax[i].second - minmax[i].first);
+            image[j + 1] = std::max(image[j + 1], minmax[1].first);
+            image[j + 1] = std::min(image[j + 1], minmax[1].second);
+            image[j + 1] = minmax[1].first == minmax[1].second ? 0 :
+                           ((image[j + 1] - minmax[1].first) * maxColorIntensity) /
+                           (minmax[1].second - minmax[1].first);
 
-            i = 2;
-            image[j + i] = std::max(image[j + i], minmax[i].first);
-            image[j + i] = std::min(image[j + i], minmax[i].second);
-            image[j + i] = minmax[i].first == minmax[i].second ? 0 :
-                           ((image[j + i] - minmax[i].first) * maxColorIntensity) /
-                           (minmax[i].second - minmax[i].first);
+            image[j + 2] = std::max(image[j + 2], minmax[2].first);
+            image[j + 2] = std::min(image[j + 2], minmax[2].second);
+            image[j + 2] = minmax[2].first == minmax[2].second ? 0 :
+                           ((image[j + 2] - minmax[2].first) * maxColorIntensity) /
+                           (minmax[2].second - minmax[2].first);
         }
     }
 
-    timestamps->PrintDelta("Enhancing");
-    timestamps->SaveCurrent("Updating frequency");
-    UpdateFrequency();
-    timestamps->PrintDelta("Updating frequency");
+//    timestamps->PrintDelta("Enhancing");
+//    timestamps->SaveCurrent("Updating frequency");
+//    UpdateFrequency();
+//    timestamps->PrintDelta("Updating frequency");
 
 #ifndef NDEBUG
 #ifdef _OPENMP
@@ -146,23 +116,41 @@ void Image::EnhanceGlobalContrast(int ignorance) {
 }
 
 void Image::UpdateFrequency() {
-#pragma omp parallel for shared(image, frequency) default(none)
-    for (int j = 0; j < size; j += nChannels) {
-        for (int i = 0; i < nChannels; ++i) {
-            frequency[image[j + i] + i]++;
+//    std::vector<int> cntThreadsWork;
+//    uint32_t numProcessed = 0;
+//#pragma omp parallel shared(image, frequency, cntThreadsWork) default(none)
+#pragma omp parallel shared(image, frequency) default(none)
+    {
+//#pragma omp single
+//        {
+//            cntThreadsWork.resize(omp_get_num_threads());
+//        }
+#pragma omp for
+        for (int j = 0; j < size; j += nChannels) {
+//            cntThreadsWork[omp_get_thread_num()] += 3;
+            frequency[image[j]]++;
+            frequency[image[j + 1] + 1]++;
+            frequency[image[j + 2] + 2]++;
         }
     }
+//    numProcessed = 0;
+//    std::cout << "Updating frequency" << std::endl;
+//    for (int k = 0; k < cntThreadsWork.size(); ++k) {
+//        std::cout << k << "th thread processed " << cntThreadsWork[k] << " pixels" << std::endl;
+//        numProcessed += cntThreadsWork[k];
+//    }
+//    std::cout << "Total number of processed pixels: " << numProcessed << " out of: " << size << std::endl;
 }
 
 void Image::PrintPixelIntensityFrequency() {
-//    std::cout << "Image color frequency: " << std::endl;
-//    for (int i = 0; i < nChannels; ++i) {
-//        std::cout << "Channel " << i + 1 << std::endl;
-//        for (int j = 0; j <= maxColorIntensity; ++j) {
-//            std::cout << j << ": " << frequency[i][j] << std::endl;
-//        }
-//    }
-//    std::cout << std::endl;
+    std::cout << "Image color frequency: " << std::endl;
+    for (int i = 0; i < nChannels; ++i) {
+        std::cout << "Channel " << i + 1 << std::endl;
+        for (int j = i; j <= maxColorIntensity * 3; j += nChannels) {
+            std::cout << j / 3 << ": " << frequency[j] << std::endl;
+        }
+    }
+    std::cout << std::endl;
 }
 
 std::vector<uint8_t> Image::GetImage() const {
