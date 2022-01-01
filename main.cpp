@@ -71,52 +71,55 @@ int main(int argc, char *argv[]) {
     timestamps->SaveCurrent("Generating image");
 #endif
 
-    std::vector<uint8_t> result;
-    try {
-        auto *img = new Image(buffer, numberOfChannels, width, height, maxColorValue);
+    timestamps->ShowWarnings(false);
+    for (int NTHREADS = 0; NTHREADS <= 0; ++NTHREADS) {
+        numThreads = NTHREADS;
+        Image::setOmpParameters(numThreads);
+
+        std::vector<uint8_t> result;
+        try {
+            auto *img = new Image(buffer, numberOfChannels, width, height, maxColorValue);
 
 #ifndef NDEBUG
-//        img->PrintPixelIntensityFrequency();
-        timestamps->PrintDelta("Generating image");
+            //        img->PrintPixelIntensityFrequency();
+                    timestamps->PrintDelta("Generating image");
 #endif
-        timestamps->SaveCurrent("Enhancing contrast");
-        const int ignorance = GetInt(argv[4]);
-        img->EnhanceGlobalContrast(ignorance);
-        std::cout << "Time (" << numThreads << " thread(s)): "
-                  << timestamps->GetDelta("Enhancing contrast").wall * 1000. << " ms\n";
+            timestamps->SaveCurrent("Enhancing contrast");
+            const int ignorance = GetInt(argv[4]);
+            img->EnhanceGlobalContrast(ignorance);
+            std::cout << "Time (" << numThreads << " thread(s)): "
+                      << timestamps->GetDelta("Enhancing contrast").wall * 1000. << " ms\n";
 
 #ifndef NDEBUG
-        timestamps->PrintDelta("Enhancing contrast");
-//        img->PrintPixelIntensityFrequency();
-        timestamps->SaveCurrent("Getting image");
+            timestamps->PrintDelta("Enhancing contrast");
+    //        img->PrintPixelIntensityFrequency();
+            timestamps->SaveCurrent("Getting image");
 #endif
 
-        result = img->GetImage();
+            result = img->GetImage();
 
 #ifndef NDEBUG
-        timestamps->PrintDelta("Getting image");
-        timestamps->SaveCurrent("Printing output");
+            timestamps->PrintDelta("Getting image");
+            timestamps->SaveCurrent("Printing output");
 #endif
 
-        //todo прикрутить время
-        //todo многопоточность
+        } catch (std::invalid_argument &e) {
+            throw GetErr("Invalid image: " + std::string(e.what()));
+        }
 
-    } catch (std::invalid_argument &e) {
-        throw GetErr("Invalid image: " + std::string(e.what()));
+        const std::string outFileName = argv[3];
+        std::ofstream outStr(outFileName, std::ios::out | std::ios::binary);
+        if (!outStr) {
+            throw GetErr("Could not write to the output file: " + inFileName);
+        }
+        outStr << fileType << '\n' << width << ' ' << height << '\n' << maxColorValue << '\n';
+        outStr.write(reinterpret_cast<char *>(result.data()), result.size());
+
+#ifndef NDEBUG
+        timestamps->PrintDelta("Printing output");
+        timestamps->PrintDelta("Overall");
+#endif
     }
-
-    const std::string outFileName = argv[3];
-    std::ofstream outStr(outFileName, std::ios::out | std::ios::binary);
-    if (!outStr) {
-        throw GetErr("Could not write to the output file: " + inFileName);
-    }
-    outStr << fileType << '\n' << width << ' ' << height << '\n' << maxColorValue << '\n';
-    outStr.write(reinterpret_cast<char *>(result.data()), result.size());
-
-#ifndef NDEBUG
-    timestamps->PrintDelta("Printing output");
-    timestamps->PrintDelta("Overall");
-#endif
 
     return 0;
 }

@@ -27,8 +27,8 @@ Time::AllTime Time::GetDelta(const std::string &label) {
 
 void Time::PrintDelta(const std::string &label) {
     AllTime delta = GetDelta(label);
-    std::cout << label << " time | wall: " << delta.wall << " s" << std::endl;
-    std::cout << label << " time | CPU : " << delta.cpu << " s" << std::endl;
+    std::cout << label << " time | wall: " << delta.wall * 1000. << " ms" << std::endl;
+    std::cout << label << " time | CPU : " << delta.cpu * 1000. << " ms" << std::endl;
 }
 
 void Time::ShowWarnings(const bool &flag) {

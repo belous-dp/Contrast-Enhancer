@@ -32,7 +32,7 @@ private:
     std::vector<uint8_t> image;
     std::vector<int> frequency;
 
-    uint8_t GetMinMaxIntensityLevel(int ignorance, int channel, int step);
+    std::pair<uint8_t, uint8_t> GetMinMaxIntensityLevel(int ignorance, int channel);
 
     void UpdateFrequency();
 
