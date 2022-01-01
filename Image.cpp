@@ -123,7 +123,7 @@ void Image::EnhanceGlobalContrast(int ignorance) {
     timestamps->PrintDelta("Enhancing");
     timestamps->SaveCurrent("Updating frequency");
 #endif
-//    UpdateFrequency();
+    UpdateFrequency();
 #ifndef NDEBUG
     timestamps->PrintDelta("Updating frequency");
 #endif

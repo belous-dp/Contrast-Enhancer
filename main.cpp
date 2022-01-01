@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
 #endif
 
     if (argc != 5) {
-        std::cout << "Usage: hw5 [number of threads, 0=default] [input file name] [output file name] " <<
+        std::cout << "Usage: ContrastEnhancer [number of threads, 0=default] [input file name] [output file name] " <<
                   "[ignore percentage (number of pixels with extreme value to be ignored), integer in [0;50]]"
                   << std::endl;
         throw GetErr("Expected 4 arguments, found: " + std::to_string(argc - 1));

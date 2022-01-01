@@ -3,10 +3,10 @@ project(ContrastEnhancer)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(hw5 main.cpp Image.h Image.cpp Time.cpp Time.h)
+add_executable(ContrastEnhancer main.cpp Image.h Image.cpp Time.cpp Time.h)
 
 find_package(OpenMP REQUIRED)
-target_link_libraries(hw5 PRIVATE OpenMP::OpenMP_CXX)
+target_link_libraries(ContrastEnhancer PRIVATE OpenMP::OpenMP_CXX)
 
 set(CMAKE_CXX_FLAGS -O0)
 
