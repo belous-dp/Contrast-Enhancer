@@ -75,13 +75,13 @@ void Image::EnhanceGlobalContrast(int ignorance) {
         for (int j = 0; j < size; j += nChannels) {
 #ifndef NDEBUG
 #ifdef _OPENMP
-            //#pragma omp single
-            //            {
-            //                std::cout << "cur pixel: " << j + i << " , cur thread: " << omp_get_thread_num() << std::endl;
-            //            }
-                        cntThreadsWork[omp_get_thread_num()] += nChannels;
+//#pragma omp single
+//            {
+//                std::cout << "cur pixel: " << j + i << " , cur thread: " << omp_get_thread_num() << std::endl;
+//            }
+            cntThreadsWork[omp_get_thread_num()] += nChannels;
 #else
-                        numProcessed++;
+            numProcessed++;
 #endif
 #endif
             image[j] = std::max(image[j], minmax[0].first);
