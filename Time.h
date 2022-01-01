@@ -24,8 +24,6 @@ public:
     struct AllTime {
         double wall;
         double cpu;
-
-//        explicit AllTime(double wall = 0, double cpu = 0) : wall(wall), cpu(cpu) {}
     };
 
     void SaveCurrent(const std::string &label);
@@ -36,11 +34,11 @@ public:
 
     void ShowWarnings(const bool &flag);
 
-    Time(int precision = 0) { std::cout << std::fixed << std::setprecision(precision); }
+    explicit Time(int precision = 0) { std::cout << std::fixed << std::setprecision(precision); }
 
 private:
 
-    bool warnings;
+    bool warnings{};
 
     std::unordered_map<std::string, AllTime> data_;
 

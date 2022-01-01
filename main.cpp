@@ -6,6 +6,8 @@
 #include "Image.h"
 #include "Time.h"
 
+//#define LOGGING
+
 std::invalid_argument GetErr(const std::string &message);
 
 int GetInt(const char *sNumber);
@@ -20,7 +22,9 @@ int main(int argc, char *argv[]) {
 #endif
 
     if (argc != 5) {
-        //todo readme
+        std::cout << "Usage: hw5 [number of threads, 0=default] [input file name] [output file name] " <<
+                  "[ignore percentage (number of pixels with extreme value to be ignored), integer in [0;50]]"
+                  << std::endl;
         throw GetErr("Expected 4 arguments, found: " + std::to_string(argc - 1));
     }
 
@@ -32,6 +36,12 @@ int main(int argc, char *argv[]) {
     }
 #ifdef _OPENMP
     Image::setOmpParameters(numThreads);
+#else
+    if (numThreads > 1) {
+        std::cout << "Warning: OpenMP is not connected but trying to set its parameters." << std::endl
+                  << "The program will run in one thread mode." << std::endl << std::endl;
+        numThreads = 1;
+    }
 #endif
 
     const std::string inFileName = argv[2];
@@ -67,14 +77,14 @@ int main(int argc, char *argv[]) {
     assert(buffer.size() == width * height * numberOfChannels);
     assert(inStr); // some bytes left
 
-//    std::ofstream logging("tests/schedule(dynamic, 27836416)", std::ios::out);
+#ifdef LOGGING
+    std::ofstream logging("tests/logs", std::ios::out);
+#endif
 
 #ifndef NDEBUG
     timestamps->PrintDelta("Reading input");
     timestamps->SaveCurrent("Generating image");
 #endif
-
-    timestamps->ShowWarnings(false);
 
     std::vector<uint8_t> result;
     try {
@@ -84,17 +94,17 @@ int main(int argc, char *argv[]) {
         img->PrintPixelIntensityFrequency();
         timestamps->PrintDelta("Generating image");
 #endif
-//        for (int NTHREADS = 0; NTHREADS <= 32; ++NTHREADS) {
-//            numThreads = NTHREADS;
-//            Image::setOmpParameters(numThreads);
+
         timestamps->SaveCurrent("Enhancing contrast");
         const int ignorance = GetInt(argv[4]);
         img->EnhanceGlobalContrast(ignorance);
-//            logging << numThreads << ' ' << timestamps->GetDelta("Enhancing contrast").wall * 1000. << '\n';
-//            logging.flush();
+
+#ifdef LOGGING
+        logging << numThreads << ' ' << timestamps->GetDelta("Enhancing contrast").wall * 1000. << '\n';
+        logging.flush();
+#endif
         std::cout << "Time (" << numThreads << " thread(s)): "
                   << timestamps->GetDelta("Enhancing contrast").wall * 1000. << " ms\n";
-//        }
 
 #ifndef NDEBUG
         timestamps->PrintDelta("Enhancing contrast");
