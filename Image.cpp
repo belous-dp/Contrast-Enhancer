@@ -5,6 +5,7 @@
 #include <iostream>
 #include <cassert>
 #include <omp.h>
+#include <cmath>
 #include "Image.h"
 #include "Time.h"
 
@@ -37,8 +38,8 @@ Image::Image(std::vector<uint8_t> &source, int numberOfChannels, int width, int 
 }
 
 // Applies min-max contrast stretching (percentile contrast stretching if ignore is not zero)
-void Image::EnhanceGlobalContrast(int ignore) {
-    expectBetween(ignore, 0, 50, "ignore percentage");
+void Image::EnhanceGlobalContrast(double ignore) {
+    expectBetween((int) (ignore * 100), 0, 49, "ignore percentage");
 
 #ifndef NDEBUG
     Time *timestamps = new Time();
@@ -175,10 +176,10 @@ void Image::expectBetween(int number, int from, int to, const std::string &varNa
     }
 }
 
-std::pair<uint8_t, uint8_t> Image::GetMinMaxIntensityLevel(int ignore, int channel) {
+std::pair<uint8_t, uint8_t> Image::GetMinMaxIntensityLevel(double ignore, int channel) {
     assert(0 <= ignore && ignore <= 50);
     assert(0 <= channel && channel < nChannels);
-    uint32_t toSkip = (uint64_t) width * height * ignore / 100;
+    auto toSkip = (uint32_t) round(width * height * ignore);
     uint32_t skipped = 0;
     uint8_t first;
     for (int i = channel; i < frequency.size(); i += nChannels) {

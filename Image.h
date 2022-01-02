@@ -15,7 +15,7 @@ public:
 
     [[nodiscard]] std::vector<uint8_t> GetImage() const;
 
-    void EnhanceGlobalContrast(int ignore);
+    void EnhanceGlobalContrast(double ignore);
 
     void PrintPixelIntensityFrequency();
 
@@ -33,7 +33,7 @@ private:
     std::vector<uint8_t> image;
     std::vector<int> frequency;
 
-    std::pair<uint8_t, uint8_t> GetMinMaxIntensityLevel(int ignore, int channel);
+    std::pair<uint8_t, uint8_t> GetMinMaxIntensityLevel(double ignore, int channel);
 
     void UpdateFrequency();
 

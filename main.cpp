@@ -3,12 +3,15 @@
 #include <vector>
 #include <cassert>
 #include <cerrno>
+#include <cmath>
 #include "Image.h"
 #include "Time.h"
 
 std::invalid_argument GetErr(const std::string &message);
 
 int GetInt(const char *sNumber);
+
+double GetIgnore(const char *sNumber);
 
 int main(int argc, char *argv[]) {
 
@@ -45,7 +48,7 @@ int main(int argc, char *argv[]) {
     const std::string inFileName = argv[2];
     std::ifstream inStr(inFileName, std::ios::in | std::ios::binary);
     if (!inStr) {
-        throw GetErr("Could not read from the input file: " + inFileName + ". File does not exist or corrupted");
+        throw GetErr("Could not read from the input file: " + inFileName + ". File does not exist or is corrupted");
     }
 
     std::string fileType;
@@ -85,13 +88,13 @@ int main(int argc, char *argv[]) {
         auto *img = new Image(buffer, numberOfChannels, width, height, maxColorValue);
 
 #ifndef NDEBUG
-//        img->PrintPixelIntensityFrequency();
-        timestamps->PrintDelta("Generating image");
-        timestamps->SaveCurrent("Enhancing contrast");
+        //        img->PrintPixelIntensityFrequency();
+                timestamps->PrintDelta("Generating image");
+                timestamps->SaveCurrent("Enhancing contrast");
 #endif
 
-        const int ignorance = GetInt(argv[4]);
-        img->EnhanceGlobalContrast(ignorance);
+        const double ignore = GetIgnore(argv[4]);
+        img->EnhanceGlobalContrast(ignore);
 
         std::cout << "Time (" << numThreads << " thread(s)): "
                   << timestamps->GetDelta("Testing").wall * 1000. << " ms\n";
@@ -119,7 +122,7 @@ int main(int argc, char *argv[]) {
         throw GetErr("Could not write to the output file: " + inFileName);
     }
     outStr << fileType << '\n' << width << ' ' << height << '\n' << maxColorValue << '\n';
-    outStr.write(reinterpret_cast<char *>(result.data()), result.size());
+    outStr.write(reinterpret_cast<char *>(result.data()), (int64_t) result.size());
 
 #ifndef NDEBUG
     timestamps->PrintDelta("Printing output");
@@ -138,6 +141,43 @@ int GetInt(const char *sNumber) {
         return num;
     }
     throw GetErr("Expected integer value. Found: " + std::string(sNumber));
+}
+
+long long GetLongLong(const char *sNumber) {
+    errno = 0;
+    const char *pIgn = sNumber;
+    char *pEnd = nullptr;
+    const long long num = strtoll(pIgn, &pEnd, 10);
+    if (pIgn != pEnd && errno == 0 && !*pEnd) {
+        return num;
+    }
+    throw GetErr("Expected integer value. Found: " + std::string(sNumber));
+}
+
+double GetIgnore(const char *sNumber) {
+    std::string s(sNumber);
+    double ignore = -1;
+    try {
+        if (s.find('.') < s.size()) {
+            if (s[0] != '0' || s[1] != '.') {
+                throw std::invalid_argument("Invalid value");
+            }
+            ignore = (double) GetLongLong(s.substr(2, s.size()).data()) / pow(10, (int) s.size() - 2);
+        } else {
+            if (s != "0") {
+                throw std::invalid_argument("Invalid value");
+            } else {
+                ignore = 0;
+            }
+        }
+        if (ignore >= 0.5) {
+            throw std::invalid_argument("Ignore >= 0.5");
+        }
+    } catch (std::invalid_argument &e) {
+        std::cout << e.what() << std::endl;
+        throw std::invalid_argument("Invalid ignore value, must be float in [0;0.5), found: " + s);
+    }
+    return ignore;
 }
 
 std::invalid_argument GetErr(const std::string &message) { return std::invalid_argument(message); }

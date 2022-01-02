@@ -57,7 +57,7 @@ private:
             //  Handle error
             return 0;
         }
-        return (double) time.QuadPart / freq.QuadPart;
+        return (double) time.QuadPart / (double) freq.QuadPart;
     }
 
     static double GetCpuTime() {
