@@ -6,8 +6,6 @@
 #include "Image.h"
 #include "Time.h"
 
-#define LOGGING
-
 std::invalid_argument GetErr(const std::string &message);
 
 int GetInt(const char *sNumber);
@@ -76,13 +74,6 @@ int main(int argc, char *argv[]) {
 
     assert(buffer.size() == width * height * numberOfChannels);
 
-#ifdef LOGGING
-    std::vector<int> testing = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 24, 32 };
-    std::ofstream logging("tests/logs_clang_test_name", std::ios::out);
-    logging << "threads time" << std::endl;
-    timestamps->ShowWarnings(false);
-#endif
-
 #ifndef NDEBUG
     timestamps->PrintDelta("Reading input");
     timestamps->SaveCurrent("Generating image");
@@ -90,35 +81,28 @@ int main(int argc, char *argv[]) {
 
     std::vector<uint8_t> result;
     try {
-        for (int numThreads : testing) {
-            Image::setOmpParameters(numThreads);
-            timestamps->SaveCurrent("Testing");
-            auto *img = new Image(buffer, numberOfChannels, width, height, maxColorValue);
+        timestamps->SaveCurrent("Testing");
+        auto *img = new Image(buffer, numberOfChannels, width, height, maxColorValue);
 
 #ifndef NDEBUG
-            //        img->PrintPixelIntensityFrequency();
-                    timestamps->PrintDelta("Generating image");
-                    timestamps->SaveCurrent("Enhancing contrast");
+//        img->PrintPixelIntensityFrequency();
+        timestamps->PrintDelta("Generating image");
+        timestamps->SaveCurrent("Enhancing contrast");
 #endif
 
-            const int ignorance = GetInt(argv[4]);
-            img->EnhanceGlobalContrast(ignorance);
+        const int ignorance = GetInt(argv[4]);
+        img->EnhanceGlobalContrast(ignorance);
 
-#ifdef LOGGING
-            logging << numThreads << ' ' << timestamps->GetDelta("Testing").wall * 1000. << '\n';
-            logging.flush();
-#endif
-            std::cout << "Time (" << numThreads << " thread(s)): "
-                      << timestamps->GetDelta("Testing").wall * 1000. << " ms\n";
+        std::cout << "Time (" << numThreads << " thread(s)): "
+                  << timestamps->GetDelta("Testing").wall * 1000. << " ms\n";
 
 #ifndef NDEBUG
-            timestamps->PrintDelta("Enhancing contrast");
-    //        img->PrintPixelIntensityFrequency();
-            timestamps->SaveCurrent("Getting image");
+        timestamps->PrintDelta("Enhancing contrast");
+//        img->PrintPixelIntensityFrequency();
+        timestamps->SaveCurrent("Getting image");
 #endif
 
-//            result = img->GetImage();
-        }
+        result = img->GetImage();
 
 #ifndef NDEBUG
         timestamps->PrintDelta("Getting image");
