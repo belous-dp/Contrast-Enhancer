@@ -19,10 +19,13 @@ Image::Image(std::vector<uint8_t> &source, int numberOfChannels, int width, int 
     expectPositive(height, "height");
     this->height = height;
 
-    expectNonNegative(maxColorIntensity, "maximum color intensity");
+    expectBetween(maxColorIntensity, 0, MAX_COLOR_VALUE, "maximum color intensity");
     this->maxColorIntensity = maxColorIntensity;
 
     this->size = width * height * numberOfChannels;
+    if (this->size != (uint64_t) width * height * numberOfChannels) {
+        throw std::invalid_argument("Image is too big");
+    }
 
     if (source.size() != size) {
         throw std::invalid_argument("Image expected size does not match real size");
@@ -33,9 +36,9 @@ Image::Image(std::vector<uint8_t> &source, int numberOfChannels, int width, int 
     UpdateFrequency();
 }
 
-// Applies min-max contrast stretching (percentile contrast stretching if ignorance is not zero)
-void Image::EnhanceGlobalContrast(int ignorance) {
-    expectBetween(ignorance, 0, 50, "ignorance percentage");
+// Applies min-max contrast stretching (percentile contrast stretching if ignore is not zero)
+void Image::EnhanceGlobalContrast(int ignore) {
+    expectBetween(ignore, 0, 50, "ignore percentage");
 
 #ifndef NDEBUG
     Time *timestamps = new Time();
@@ -43,9 +46,9 @@ void Image::EnhanceGlobalContrast(int ignorance) {
 #endif
 
     std::vector<std::pair<uint8_t, uint8_t>> minmax(MAX_NUM_CHANNELS);
-#pragma omp parallel for shared(minmax, ignorance) default(none)
+#pragma omp parallel for shared(minmax, ignore) default(none)
     for (int i = 0; i < nChannels; ++i) {
-        minmax[i] = GetMinMaxIntensityLevel(ignorance, i);
+        minmax[i] = GetMinMaxIntensityLevel(ignore, i);
     }
 
 #ifndef NDEBUG
@@ -61,7 +64,7 @@ void Image::EnhanceGlobalContrast(int ignorance) {
     std::vector<int> cntThreadsWork;
     uint32_t numProcessed = 0;
 
-#pragma omp parallel shared(image, ignorance, cntThreadsWork, minmax, numProcessed) default(none)
+#pragma omp parallel shared(image, ignore, cntThreadsWork, minmax, numProcessed) default(none)
     {
 
 #if defined(_OPENMP) && !defined(NDEBUG)
@@ -77,11 +80,11 @@ void Image::EnhanceGlobalContrast(int ignorance) {
 #ifdef _OPENMP
 //#pragma omp single
 //            {
-//                std::cout << "cur pixel: " << j + i << " , cur thread: " << omp_get_thread_num() << std::endl;
+//                std::cout << "cur pixel: " << j << " , cur thread: " << omp_get_thread_num() << std::endl;
 //            }
             cntThreadsWork[omp_get_thread_num()] += nChannels;
 #else
-            numProcessed++;
+            numProcessed += nChannels;
 #endif
 #endif
             image[j] = std::max(image[j], minmax[0].first);
@@ -132,11 +135,11 @@ void Image::EnhanceGlobalContrast(int ignorance) {
 void Image::UpdateFrequency() {
 #pragma omp parallel for shared(image, frequency) default(none)
     for (int j = 0; j < size; j += nChannels) {
-        frequency[image[j]]++;
+        frequency[image[j] * nChannels]++;
         if (nChannels > 1) {
-            frequency[image[j + 1] + 1]++;
+            frequency[image[j + 1] * nChannels + 1]++;
             if (nChannels > 2) {
-                frequency[image[j + 2] + 2]++;
+                frequency[image[j + 2] * nChannels + 2]++;
             }
         }
     }
@@ -146,8 +149,8 @@ void Image::PrintPixelIntensityFrequency() {
     std::cout << "Image color frequency: " << std::endl;
     for (int i = 0; i < nChannels; ++i) {
         std::cout << "Channel " << i + 1 << std::endl;
-        for (int j = i; j <= maxColorIntensity * nChannels; j += nChannels) {
-            std::cout << j / nChannels << ": " << frequency[j] << std::endl;
+        for (int j = i, k = 0; j < frequency.size(); j += nChannels, ++k) {
+            std::cout << k << ": " << frequency[j] << std::endl;
         }
     }
     std::cout << std::endl;
@@ -172,26 +175,25 @@ void Image::expectBetween(int number, int from, int to, const std::string &varNa
     }
 }
 
-std::pair<uint8_t, uint8_t> Image::GetMinMaxIntensityLevel(int ignorance, int channel) {
-    assert(0 <= ignorance && ignorance <= 50);
+std::pair<uint8_t, uint8_t> Image::GetMinMaxIntensityLevel(int ignore, int channel) {
+    assert(0 <= ignore && ignore <= 50);
     assert(0 <= channel && channel < nChannels);
-    //todo упомянуть в отчёте про int'ы (43 8к картинки влезает)
-    uint32_t toSkip = (uint64_t) width * height * ignorance / 100;
+    uint32_t toSkip = (uint64_t) width * height * ignore / 100;
     uint32_t skipped = 0;
     uint8_t first;
-    for (int i = 0; i < maxColorIntensity; ++i) {
-        skipped += frequency[channel + i];
+    for (int i = channel; i < frequency.size(); i += nChannels) {
+        skipped += frequency[i];
         if (skipped > toSkip) {
-            first = i;
+            first = i / nChannels;
             break;
         }
     }
     skipped = 0;
     uint8_t last;
-    for (int i = maxColorIntensity - 1; i >= 0; --i) {
-        skipped += frequency[channel + i];
+    for (int i = (int)frequency.size() - nChannels + channel; i >= 0; i -= nChannels) {
+        skipped += frequency[i];
         if (skipped > toSkip) {
-            last = i;
+            last = i / nChannels;
             break;
         }
     }

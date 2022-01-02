@@ -15,7 +15,7 @@ public:
 
     [[nodiscard]] std::vector<uint8_t> GetImage() const;
 
-    void EnhanceGlobalContrast(int ignorance);
+    void EnhanceGlobalContrast(int ignore);
 
     void PrintPixelIntensityFrequency();
 
@@ -25,14 +25,15 @@ private:
 
     static constexpr int MIN_NUM_CHANNELS = 1;
     static constexpr int MAX_NUM_CHANNELS = 3;
-    size_t size;
+    static constexpr int MAX_COLOR_VALUE = 255;
+    uint32_t size;
     int nChannels;
     int width, height;
     int maxColorIntensity;
     std::vector<uint8_t> image;
     std::vector<int> frequency;
 
-    std::pair<uint8_t, uint8_t> GetMinMaxIntensityLevel(int ignorance, int channel);
+    std::pair<uint8_t, uint8_t> GetMinMaxIntensityLevel(int ignore, int channel);
 
     void UpdateFrequency();
 
