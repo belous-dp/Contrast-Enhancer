@@ -34,11 +34,14 @@ public:
 
     void ShowWarnings(const bool &flag);
 
-    explicit Time(int precision = 0) { std::cout << std::fixed << std::setprecision(precision); }
+    explicit Time(int precision = 0) {
+        std::cout << std::fixed << std::setprecision(precision);
+        warnings = true;
+    }
 
 private:
 
-    bool warnings{};
+    bool warnings;
 
     std::unordered_map<std::string, AllTime> data_;
 
