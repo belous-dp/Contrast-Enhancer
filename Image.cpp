@@ -3,7 +3,6 @@
 //
 
 #include <iostream>
-#include <fstream>
 #include <cassert>
 #include <omp.h>
 #include <cmath>
@@ -55,71 +54,62 @@ void Image::EnhanceGlobalContrast(double ignore) {
 
     timestamps->PrintDelta("Getting min-max params");
 #endif
-    std::fstream logging("tests/logs/logs_dynamic_1_3.txt", std::ios::out);
-    auto save = image;
-    timestamps->ShowWarnings(false);
-    std::vector<int> nths = { 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 24, 32 };
-    for (int nth : nths) {
-        image = save;
-        omp_set_num_threads(nth);
-        timestamps->SaveCurrent("Enhancing");
+    timestamps->SaveCurrent("Enhancing");
 
-        std::vector<int> cntThreadsWork;
-        uint32_t numProcessed = 0;
+    std::vector<int> cntThreadsWork;
+    uint32_t numProcessed = 0;
 
 
 #pragma omp parallel shared(ignore, cntThreadsWork, min, max, numProcessed) default(none)
-        {
+    {
 
 #ifdef _OPENMP
 #pragma omp single
-            {
-                cntThreadsWork.resize(omp_get_num_threads());
-            }
+        {
+            cntThreadsWork.resize(omp_get_num_threads());
+        }
 #else
-            cntThreadsWork.resize(1);
+        cntThreadsWork.resize(1);
 #endif
 
-#pragma omp for schedule(dynamic, 1)
-            for (int j = 0; j < size; j += nChannels) {
+#pragma omp for schedule(static)
+        for (int j = 0; j < size; j += nChannels) {
+            for (int i = 0; i < nChannels; ++i) {
 #ifndef NDEBUG
 #ifdef _OPENMP
 //#pragma omp single
-//            {
-//                std::cout << "cur pixel: " << j << " , cur thread: " << omp_get_thread_num() << std::endl;
-//            }
-                cntThreadsWork[omp_get_thread_num()] += nChannels;
+//                {
+//                    std::cout << "cur pixel: " << j + i << " , cur thread: " << omp_get_thread_num() << std::endl;
+//                }
+                cntThreadsWork[omp_get_thread_num()]++;
 #else
-                numProcessed += nChannels;
+                numProcessed++;
 #endif
 #endif
-                for (int i = 0; i < nChannels; ++i) {
-                    image[j + i] = std::max(image[j + i], min);
-                    image[j + i] = std::min(image[j + i], max);
-                    image[j + i] = min == max ? 0 : ((image[j + i] - min) * maxColorIntensity) / (max - min);
-                }
+                image[j + i] = std::max(image[j + i], min);
+                image[j + i] = std::min(image[j + i], max);
+                image[j + i] = min == max ? 0 : ((image[j + i] - min) * maxColorIntensity) / (max - min);
             }
         }
+    }
 
 #ifndef NDEBUG
 #ifdef _OPENMP
-        numProcessed = 0;
-        for (int k = 0; k < cntThreadsWork.size(); ++k) {
-            std::cout << k << "th thread processed " << cntThreadsWork[k] << " pixels" << std::endl;
-            numProcessed += cntThreadsWork[k];
-        }
-#endif
-        std::cout << "Total number of processed pixels: " << numProcessed << " out of: " << size << std::endl;
-#endif
-        // uncomment if you want to print time like in logs
-        std::cout << "Time (" << cntThreadsWork.size() << " thread(s)): "
-                  << timestamps->GetDelta("Enhancing").wall * 1000. << " ms\n";
-        logging << timestamps->GetDelta("Enhancing").wall * 1000. << std::endl;
-#ifndef NDEBUG
-        timestamps->PrintDelta("Enhancing");
-        timestamps->SaveCurrent("Updating frequency");
-#endif
+    numProcessed = 0;
+    for (int k = 0; k < cntThreadsWork.size(); ++k) {
+        std::cout << k << "th thread processed " << cntThreadsWork[k] << " pixels" << std::endl;
+        numProcessed += cntThreadsWork[k];
     }
+#endif
+    std::cout << "Total number of processed pixels: " << numProcessed << " out of: " << size << std::endl;
+#endif
+    // uncomment if you want to print time like in logs
+//    std::cout << "Time (" << cntThreadsWork.size() << " thread(s)): "
+//              << timestamps->GetDelta("Enhancing").wall * 1000. << " ms\n";
+#ifndef NDEBUG
+    timestamps->PrintDelta("Enhancing");
+    timestamps->SaveCurrent("Updating frequency");
+#endif
     UpdateFrequency();
 #ifndef NDEBUG
     timestamps->PrintDelta("Updating frequency");
@@ -127,7 +117,7 @@ void Image::EnhanceGlobalContrast(double ignore) {
 }
 
 void Image::UpdateFrequency() {
-#pragma omp parallel for shared(image, frequency) default(none)
+#pragma omp parallel for default(none)
     for (int j = 0; j < size; j += nChannels) {
         for (int i = 0; i < nChannels; ++i) {
             frequency[image[j + i] * nChannels + i]++;
