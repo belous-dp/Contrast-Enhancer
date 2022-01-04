@@ -6,7 +6,6 @@
 #define CONTRASTENHANCER_IMAGE_H
 
 #include <vector>
-//#include <cstdint>
 
 class Image {
 public:

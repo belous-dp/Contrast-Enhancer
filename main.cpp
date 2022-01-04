@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
 
     if (argc != 5) {
         std::cout << "Usage: hw5 [number of threads, 0=default] [input file name] [output file name] " <<
-                  "[ignore percentage (number of pixels with extreme value to be ignored), integer in [0;50]]"
+                  "[ignore percentage (how much pixels with extreme value to ignore), real number in [0;0.5)]"
                   << std::endl;
         throw GetErr("Expected 4 arguments, found: " + std::to_string(argc - 1));
     }
