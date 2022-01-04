@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
         auto *img = new Image(buffer, numberOfChannels, width, height, maxColorValue);
 
 #ifndef NDEBUG
-        //        img->PrintPixelIntensityFrequency();
+//                img->PrintPixelIntensityFrequency();
                 timestamps->PrintDelta("Generating image");
                 timestamps->SaveCurrent("Enhancing contrast");
 #endif

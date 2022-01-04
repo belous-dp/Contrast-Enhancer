@@ -5,9 +5,8 @@
 #ifndef CONTRASTENHANCER_IMAGE_H
 #define CONTRASTENHANCER_IMAGE_H
 
-#include <array>
 #include <vector>
-#include <cstdint>
+//#include <cstdint>
 
 class Image {
 public:
@@ -33,7 +32,7 @@ private:
     std::vector<uint8_t> image;
     std::vector<int> frequency;
 
-    std::pair<uint8_t, uint8_t> GetMinMaxIntensityLevel(double ignore, int channel);
+    void GetMinMaxIntensityLevel(double ignore, uint8_t &min, uint8_t &max);
 
     void UpdateFrequency();
 

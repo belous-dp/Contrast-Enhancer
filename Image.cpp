@@ -46,17 +46,11 @@ void Image::EnhanceGlobalContrast(double ignore) {
     timestamps->SaveCurrent("Getting min-max params");
 #endif
 
-    std::vector<std::pair<uint8_t, uint8_t>> minmax(MAX_NUM_CHANNELS);
-#pragma omp parallel for shared(minmax, ignore) default(none)
-    for (int i = 0; i < nChannels; ++i) {
-        minmax[i] = GetMinMaxIntensityLevel(ignore, i);
-    }
+    uint8_t min = MAX_COLOR_VALUE, max = 0;
+    GetMinMaxIntensityLevel(ignore, min, max);
 
 #ifndef NDEBUG
-    for (int i = 0; i < nChannels; ++i) {
-        std::cout << "Min and max pixel values after ignoring: Channel " << i << ": " << (int) minmax[i].first << ' '
-                  << (int) minmax[i].second << std::endl;
-    }
+    std::cout << "Global min and max pixel values after ignoring: " << (int) min << ' ' << (int) max << std::endl;
 
     timestamps->PrintDelta("Getting min-max params");
     timestamps->SaveCurrent("Enhancing");
@@ -65,7 +59,7 @@ void Image::EnhanceGlobalContrast(double ignore) {
     std::vector<int> cntThreadsWork;
     uint32_t numProcessed = 0;
 
-#pragma omp parallel shared(image, ignore, cntThreadsWork, minmax, numProcessed) default(none)
+#pragma omp parallel shared(ignore, cntThreadsWork, min, max, numProcessed) default(none)
     {
 
 #if defined(_OPENMP) && !defined(NDEBUG)
@@ -88,26 +82,10 @@ void Image::EnhanceGlobalContrast(double ignore) {
             numProcessed += nChannels;
 #endif
 #endif
-            image[j] = std::max(image[j], minmax[0].first);
-            image[j] = std::min(image[j], minmax[0].second);
-            image[j] = minmax[0].first == minmax[0].second ? 0 :
-                       ((image[j] - minmax[0].first) * maxColorIntensity) /
-                       (minmax[0].second - minmax[0].first);
-
-            if (nChannels > 1) {
-                image[j + 1] = std::max(image[j + 1], minmax[1].first);
-                image[j + 1] = std::min(image[j + 1], minmax[1].second);
-                image[j + 1] = minmax[1].first == minmax[1].second ? 0 :
-                               ((image[j + 1] - minmax[1].first) * maxColorIntensity) /
-                               (minmax[1].second - minmax[1].first);
-
-                if (nChannels > 2) {
-                    image[j + 2] = std::max(image[j + 2], minmax[2].first);
-                    image[j + 2] = std::min(image[j + 2], minmax[2].second);
-                    image[j + 2] = minmax[2].first == minmax[2].second ? 0 :
-                                   ((image[j + 2] - minmax[2].first) * maxColorIntensity) /
-                                   (minmax[2].second - minmax[2].first);
-                }
+            for (int i = 0; i < nChannels; ++i) {
+                image[j + i] = std::max(image[j + i], min);
+                image[j + i] = std::min(image[j + i], max);
+                image[j + i] = min == max ? 0 : ((image[j + i] - min) * maxColorIntensity) / (max - min);
             }
         }
     }
@@ -136,12 +114,8 @@ void Image::EnhanceGlobalContrast(double ignore) {
 void Image::UpdateFrequency() {
 #pragma omp parallel for shared(image, frequency) default(none)
     for (int j = 0; j < size; j += nChannels) {
-        frequency[image[j] * nChannels]++;
-        if (nChannels > 1) {
-            frequency[image[j + 1] * nChannels + 1]++;
-            if (nChannels > 2) {
-                frequency[image[j + 2] * nChannels + 2]++;
-            }
+        for (int i = 0; i < nChannels; ++i) {
+            frequency[image[j + i] * nChannels + i]++;
         }
     }
 }
@@ -176,29 +150,41 @@ void Image::expectBetween(int number, int from, int to, const std::string &varNa
     }
 }
 
-std::pair<uint8_t, uint8_t> Image::GetMinMaxIntensityLevel(double ignore, int channel) {
+void Image::GetMinMaxIntensityLevel(double ignore, uint8_t &min, uint8_t &max) {
     assert(0 <= ignore && ignore <= 50);
-    assert(0 <= channel && channel < nChannels);
     auto toSkip = (uint32_t) round(width * height * ignore);
-    uint32_t skipped = 0;
-    uint8_t first;
-    for (int i = channel; i < frequency.size(); i += nChannels) {
-        skipped += frequency[i];
-        if (skipped > toSkip) {
-            first = i / nChannels;
-            break;
+    std::vector<uint8_t> cmin(MAX_NUM_CHANNELS, maxColorIntensity), cmax(MAX_NUM_CHANNELS);
+    std::vector<uint32_t> skipped(MAX_NUM_CHANNELS);
+    uint8_t id = 0;
+    for (int i = 0; i < frequency.size(); i += nChannels, ++id) {
+        for (int j = 0; j < nChannels; ++j) {
+            skipped[j] += frequency[i + j];
+            if (skipped[j] > toSkip) {
+                cmin[j] = std::min(cmin[j], id);
+            }
         }
     }
-    skipped = 0;
-    uint8_t last;
-    for (int i = (int)frequency.size() - nChannels + channel; i >= 0; i -= nChannels) {
-        skipped += frequency[i];
-        if (skipped > toSkip) {
-            last = i / nChannels;
-            break;
+
+    skipped.assign(MAX_NUM_CHANNELS, 0);
+    id = maxColorIntensity;
+    for (int i = (int) frequency.size() - nChannels; i >= 0; i -= nChannels, --id) {
+        for (int j = 0; j < nChannels; ++j) {
+            skipped[j] += frequency[i + j];
+            if (skipped[j] > toSkip) {
+                cmax[j] = std::max(cmax[j], id);
+            }
         }
     }
-    return { first, last };
+
+    for (int i = 0; i < nChannels; ++i) {
+        min = std::min(min, cmin[i]);
+        max = std::max(max, cmax[i]);
+#ifndef NDEBUG
+        std::cout << "Min and max color values for " << i + 1 << "th channel: min = " << (int) cmin[i] << ", max = "
+                  << (int) cmax[i] << std::endl;
+#endif
+    }
+    assert(min <= max);
 }
 
 void Image::setOmpParameters(int numThreads) {
