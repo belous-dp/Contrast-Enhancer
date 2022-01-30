@@ -77,7 +77,7 @@ private:
 
 #else
 
-    double GetWallTime() {
+    static double GetWallTime() {
         struct timeval time;
         if (gettimeofday(&time, NULL)) {
             //  Handle error
@@ -86,7 +86,7 @@ private:
         return (double) time.tv_sec + (double) time.tv_usec * 0.000001;
     }
 
-    double GetCpuTime() {
+    static double GetCpuTime() {
         return (double) clock() / CLOCKS_PER_SEC;
     }
 

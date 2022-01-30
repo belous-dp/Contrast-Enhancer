@@ -96,8 +96,8 @@ int main(int argc, char *argv[]) {
         const double ignore = GetIgnore(argv[4]);
         img->EnhanceGlobalContrast(ignore);
 
-        std::cout << "Time (" << numThreads << " thread(s)): "
-                  << timestamps->GetDelta("Testing").wall * 1000. << " ms\n";
+//        std::cout << "Time (" << numThreads << " thread(s)): "
+//                  << timestamps->GetDelta("Testing").wall * 1000. << " ms\n";
 
 #ifndef NDEBUG
         timestamps->PrintDelta("Enhancing contrast");

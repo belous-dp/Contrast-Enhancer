@@ -104,8 +104,8 @@ void Image::EnhanceGlobalContrast(double ignore) {
     std::cout << "Total number of processed pixels: " << numProcessed << " out of: " << size << std::endl;
 #endif
     // uncomment if you want to print time like in logs
-//    std::cout << "Time (" << cntThreadsWork.size() << " thread(s)): "
-//              << timestamps->GetDelta("Enhancing").wall * 1000. << " ms\n";
+    std::cout << "Time (" << cntThreadsWork.size() << " thread(s)): "
+              << timestamps->GetDelta("Enhancing").wall * 1000. << " ms\n";
 #ifndef NDEBUG
     timestamps->PrintDelta("Enhancing");
     timestamps->SaveCurrent("Updating frequency");
